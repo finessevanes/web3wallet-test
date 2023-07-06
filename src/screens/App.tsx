@@ -13,13 +13,17 @@ import { getSdkError } from "@walletconnect/utils";
 import { StatusBar } from "expo-status-bar";
 import { Button, StyleSheet, Text, TextInput, View } from "react-native";
 import { useEffect, useState, useCallback } from "react";
+import { EIP155_SIGNING_METHODS } from "../utils/EIP155Lib";
+import SignModal from "./SignModal";
 
 export default function App() {
   const [currentWCURI, setCurrentWCURI] = useState("");
   const [modalVisible, setModalVisible] = useState(false);
   const [currentProposal, setCurrentProposal] = useState();
-
   const [successfulSession, setSuccessfulSession] = useState(false);
+  const [requestSession, setRequestSession] = useState();
+  const [requestEventData, setRequestEventData] = useState();
+  const [signModalVisible, setSignModalVisible] = useState(false);
   //Add Initialization
   useInitialization();
 
@@ -83,14 +87,35 @@ export default function App() {
     }
   }
 
+  const onSessionRequest = useCallback(
+    async (requestEvent: SignClientTypes.EventArguments["session_request"]) => {
+      const { topic, params } = requestEvent;
+      const { request } = params;
+      const requestSessionData =
+        web3wallet.engine.signClient.session.get(topic);
+
+      switch (request.method) {
+        case EIP155_SIGNING_METHODS.ETH_SIGN:
+        case EIP155_SIGNING_METHODS.PERSONAL_SIGN:
+          setRequestSession(requestSessionData);
+          setRequestEventData(requestEvent);
+          setSignModalVisible(true);
+          return;
+      }
+    },
+    []
+  );
+
   // Add useEffect
   useEffect(() => {
     web3wallet?.on("session_proposal", onSessionProposal);
+    web3wallet?.on("session_request", onSessionRequest);
   }, [
     pair,
     handleAccept,
     handleReject,
     currentETHAddress,
+    onSessionRequest,
     onSessionProposal,
     successfulSession,
   ]);
@@ -115,6 +140,12 @@ export default function App() {
             visible={modalVisible}
             setModalVisible={setModalVisible}
             currentProposal={currentProposal}
+          />
+          <SignModal
+            visible={signModalVisible}
+            setModalVisible={setSignModalVisible}
+            requestEvent={requestEventData}
+            requestSession={requestSession}
           />
           <Button onPress={() => pair()} title="Pair Session" />
         </View>
