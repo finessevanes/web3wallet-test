@@ -15,38 +15,35 @@ import { EIP155_SIGNING_METHODS } from "../utils/EIP155Lib";
 import SignModal from "./SignModal";
 import { BarCodeScanner } from "expo-barcode-scanner";
 
+type SessionProposal = SignClientTypes.EventArguments["session_proposal"];
+type SessionRequest = SignClientTypes.EventArguments["session_request"];
+
 export default function App() {
   const [currentWCURI, setCurrentWCURI] = useState("");
   const [modalVisible, setModalVisible] = useState(false);
-  const [currentProposal, setCurrentProposal] = useState();
+  const [currentProposal, setCurrentProposal] = useState<SessionProposal>();
   const [successfulSession, setSuccessfulSession] = useState(false);
-  const [requestSession, setRequestSession] = useState();
-  const [requestEventData, setRequestEventData] = useState();
+  const [requestSession, setRequestSession] = useState<SessionTypes.Struct>();
+  const [requestEventData, setRequestEventData] = useState<SessionRequest>();
   const [signModalVisible, setSignModalVisible] = useState(false);
-  const [hasPermission, setHasPermission] = useState<boolean | null>(null);
   const [scanning, setScanning] = useState(false);
-  const [scannedData, setScannedData] = useState(null);
 
   //Add Initialization
   useInitialization();
 
-  const onSessionProposal = useCallback(
-    (proposal: SignClientTypes.EventArguments["session_proposal"]) => {
-      setModalVisible(true);
-      setCurrentProposal(proposal);
-    },
-    []
-  );
+  const onSessionProposal = useCallback((proposal: SessionProposal) => {
+    setModalVisible(true);
+    setCurrentProposal(proposal);
+  }, []);
 
   async function handleAccept() {
-    const { id, params } = currentProposal;
-    const { requiredNamespaces, relays } = params;
-
     if (currentProposal) {
+      const { id, params }: { id: number; params: any } = currentProposal;
+      const { requiredNamespaces, relays } = params;
       const namespaces: SessionTypes.Namespaces = {};
       Object.keys(requiredNamespaces).forEach((key) => {
         const accounts: string[] = [];
-        requiredNamespaces[key].chains.map((chain) => {
+        requiredNamespaces[key].chains.map((chain: string) => {
           [currentETHAddress].map((acc) => accounts.push(`${chain}:${acc}`));
         });
 
@@ -84,9 +81,9 @@ export default function App() {
   }
 
   async function handleReject() {
-    const { id } = currentProposal;
-
+    
     if (currentProposal) {
+      const { id }: { id: number } = currentProposal;
       await web3wallet.rejectSession({
         id,
         reason: getSdkError("USER_REJECTED_METHODS"),
@@ -117,18 +114,18 @@ export default function App() {
     []
   );
 
-  const handleBarCodeScanned = async ({ data }) => {
+  const handleBarCodeScanned = async ({ data:uri }:{ data:string }) => {
     setScanning(false);
-    // Optionally, you can validate 'data' here.
-    setCurrentWCURI(data);
+    // Optionally, you can validate 'uri' here.
+    setCurrentWCURI(uri);
     try {
-      await pair(data);
+      await pair({ uri });
     } catch (error) {
       console.error("Failed to pair:", error);
     }
   };
 
-  async function pair(uri) {
+  async function pair({ uri }:{ uri:string }) {
     const pairing = await web3WalletPair({ uri });
     return pairing;
   }
@@ -146,13 +143,6 @@ export default function App() {
     onSessionProposal,
     successfulSession,
   ]);
-
-  useEffect(() => {
-    (async () => {
-      const { status } = await BarCodeScanner.requestPermissionsAsync();
-      setHasPermission(status === "granted");
-    })();
-  }, []);
 
   return (
     <View style={styles.container}>
@@ -184,7 +174,7 @@ export default function App() {
               )}
             </View>
             {!scanning && (
-              <Button onPress={() => pair(currentWCURI)} title="Pair Session" />
+              <Button onPress={() => pair({uri: currentWCURI})} title="Pair Session" />
             )}
           </View>
         ) : (
