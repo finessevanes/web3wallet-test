@@ -9,8 +9,6 @@ import useInitialization, {
 import PairingModal from "./PairingModal";
 import { SignClientTypes, SessionTypes } from "@walletconnect/types";
 import { getSdkError } from "@walletconnect/utils";
-
-import { StatusBar } from "expo-status-bar";
 import { Button, StyleSheet, Text, TextInput, View } from "react-native";
 import { useEffect, useState, useCallback } from "react";
 import { EIP155_SIGNING_METHODS } from "../utils/EIP155Lib";
@@ -36,6 +34,7 @@ export default function App() {
     (proposal: SignClientTypes.EventArguments["session_proposal"]) => {
       setModalVisible(true);
       setCurrentProposal(proposal);
+
     },
     []
   );
