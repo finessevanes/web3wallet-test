@@ -13,6 +13,7 @@ import { Button, StyleSheet, Text, TextInput, View } from "react-native";
 import { useEffect, useState, useCallback } from "react";
 import { EIP155_SIGNING_METHODS } from "../utils/EIP155Lib";
 import SignModal from "./SignModal";
+import { BarCodeScanner } from "expo-barcode-scanner";
 
 export default function App() {
   const [currentWCURI, setCurrentWCURI] = useState("");
@@ -22,19 +23,17 @@ export default function App() {
   const [requestSession, setRequestSession] = useState();
   const [requestEventData, setRequestEventData] = useState();
   const [signModalVisible, setSignModalVisible] = useState(false);
+  const [hasPermission, setHasPermission] = useState<boolean | null>(null);
+  const [scanning, setScanning] = useState(false);
+  const [scannedData, setScannedData] = useState(null);
+
   //Add Initialization
   useInitialization();
-
-  async function pair() {
-    const pairing = await web3WalletPair({ uri: currentWCURI });
-    return pairing;
-  }
 
   const onSessionProposal = useCallback(
     (proposal: SignClientTypes.EventArguments["session_proposal"]) => {
       setModalVisible(true);
       setCurrentProposal(proposal);
-
     },
     []
   );
@@ -118,6 +117,22 @@ export default function App() {
     []
   );
 
+  const handleBarCodeScanned = async ({ data }) => {
+    setScanning(false);
+    // Optionally, you can validate 'data' here.
+    setCurrentWCURI(data);
+    try {
+      await pair(data);
+    } catch (error) {
+      console.error("Failed to pair:", error);
+    }
+  };
+
+  async function pair(uri) {
+    const pairing = await web3WalletPair({ uri });
+    return pairing;
+  }
+
   // Add useEffect
   useEffect(() => {
     web3wallet?.on("session_proposal", onSessionProposal);
@@ -131,6 +146,13 @@ export default function App() {
     onSessionProposal,
     successfulSession,
   ]);
+
+  useEffect(() => {
+    (async () => {
+      const { status } = await BarCodeScanner.requestPermissionsAsync();
+      setHasPermission(status === "granted");
+    })();
+  }, []);
 
   return (
     <View style={styles.container}>
@@ -148,7 +170,22 @@ export default function App() {
               value={currentWCURI}
               placeholder="Enter WC URI (wc:1234...)"
             />
-            <Button onPress={() => pair()} title="Pair Session" />
+            <View>
+              {scanning ? (
+                <BarCodeScanner
+                  onBarCodeScanned={handleBarCodeScanned}
+                  style={{ height: 200, width: 200 }}
+                />
+              ) : (
+                <Button
+                  title="Scan QR Code"
+                  onPress={() => setScanning(true)}
+                />
+              )}
+            </View>
+            {!scanning && (
+              <Button onPress={() => pair(currentWCURI)} title="Pair Session" />
+            )}
           </View>
         ) : (
           <Button onPress={() => disconnect()} title="Disconnect" />
@@ -172,7 +209,6 @@ export default function App() {
     </View>
   );
 }
-
 
 const styles = StyleSheet.create({
   container: {
