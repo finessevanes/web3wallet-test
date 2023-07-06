@@ -72,6 +72,19 @@ export default function App() {
     }
   }
 
+  async function disconnect() {
+    const activeSessions = await web3wallet.getActiveSessions();
+    const topic = Object.values(activeSessions)[0].topic;
+
+    if (activeSessions) {
+      await web3wallet.disconnectSession({
+        topic,
+        reason: getSdkError("USER_DISCONNECTED"),
+      });
+    }
+    setSuccessfulSession(false);
+  }
+
   async function handleReject() {
     const { id } = currentProposal;
 
@@ -127,32 +140,40 @@ export default function App() {
         <Text style={styles.addressContent}>
           ETH Address: {currentETHAddress ? currentETHAddress : "Loading..."}
         </Text>
-        <View>
-          <TextInput
-            style={styles.textInputContainer}
-            onChangeText={setCurrentWCURI}
-            value={currentWCURI}
-            placeholder="Enter WC URI (wc:1234...)"
-          />
-          <PairingModal
-            handleAccept={handleAccept}
-            handleReject={handleReject}
-            visible={modalVisible}
-            setModalVisible={setModalVisible}
-            currentProposal={currentProposal}
-          />
-          <SignModal
-            visible={signModalVisible}
-            setModalVisible={setSignModalVisible}
-            requestEvent={requestEventData}
-            requestSession={requestSession}
-          />
-          <Button onPress={() => pair()} title="Pair Session" />
-        </View>
+
+        {!successfulSession ? (
+          <View>
+            <TextInput
+              style={styles.textInputContainer}
+              onChangeText={setCurrentWCURI}
+              value={currentWCURI}
+              placeholder="Enter WC URI (wc:1234...)"
+            />
+            <Button onPress={() => pair()} title="Pair Session" />
+          </View>
+        ) : (
+          <Button onPress={() => disconnect()} title="Disconnect" />
+        )}
       </View>
+
+      <PairingModal
+        handleAccept={handleAccept}
+        handleReject={handleReject}
+        visible={modalVisible}
+        setModalVisible={setModalVisible}
+        currentProposal={currentProposal}
+      />
+
+      <SignModal
+        visible={signModalVisible}
+        setModalVisible={setSignModalVisible}
+        requestEvent={requestEventData}
+        requestSession={requestSession}
+      />
     </View>
   );
 }
+
 
 const styles = StyleSheet.create({
   container: {
