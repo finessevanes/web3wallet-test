@@ -8,7 +8,7 @@ import useInitialization, {
 } from "../utils/WalletConnectUtils";
 import PairingModal from "./PairingModal";
 import { SignClientTypes, SessionTypes } from "@walletconnect/types";
-import { getSdkError } from "@walletconnect/utils";
+import { getSdkError, buildApprovedNamespaces } from "@walletconnect/utils";
 import { Button, StyleSheet, Text, TextInput, View } from "react-native";
 import { useEffect, useState, useCallback } from "react";
 import { EIP155_SIGNING_METHODS } from "../utils/EIP155Lib";
@@ -31,33 +31,105 @@ export default function App() {
   //Add Initialization
   useInitialization();
 
-  const onSessionProposal = useCallback((proposal: SessionProposal) => {
-    setModalVisible(true);
-    setCurrentProposal(proposal);
-  }, []);
+  // this the event is heard, session_proposal. this function gets called. the dapp initiatess the session proposal
+
+  // this function sets the proposal to currentProposal
+  const onSessionProposal = useCallback(
+    (proposal: SignClientTypes.EventArguments["session_proposal"]) => {
+      setModalVisible(true);
+      setCurrentProposal(proposal);
+    },
+    []
+  );
+
+  // this function is responsible for accepting the proposal. the user clicks on this button to accept the proposal. the proposal information the user needs to accept would be the following:
+  // what methods
+  // what events
+  // what chains
+  // we need to get all of this our from the proposal
 
   async function handleAccept() {
+    // the methods, chains, and events will need to be pulled out from the required and optional namespaces
+
     if (currentProposal) {
       const { id, params }: { id: number; params: any } = currentProposal;
-      const { requiredNamespaces, relays } = params;
+      const { requiredNamespaces, optionalNamespaces } = params;
       const namespaces: SessionTypes.Namespaces = {};
+
+      // here we will pull the chains and accounts from
       Object.keys(requiredNamespaces).forEach((key) => {
+        // create an array for accounts and chains
         const accounts: string[] = [];
+        // chains is new using the util
+        const chains: string[] = [];
+
+        // you go though chains
         requiredNamespaces[key].chains.map((chain: string) => {
           [currentETHAddress].map((acc) => accounts.push(`${chain}:${acc}`));
+          chains.push(chain);
         });
-
         namespaces[key] = {
+          chains,
           accounts,
           methods: requiredNamespaces[key].methods,
           events: requiredNamespaces[key].events,
         };
       });
 
+      // here pull the chains and accounts from optional namespaces
+      Object.keys(optionalNamespaces).forEach((key) => {
+        const accounts: string[] = [];
+        const chains: string[] = [];
+
+        optionalNamespaces[key].chains.map((chain: string) => {
+          [currentETHAddress].map((acc) => accounts.push(`${chain}:${acc}`));
+          chains.push(chain);
+        });
+        namespaces[key] = {
+          chains,
+          accounts,
+          methods: optionalNamespaces[key].methods,
+          events: optionalNamespaces[key].events,
+        };
+      });
+
+      console.log("#### buildApprovedNameSpace data:", namespaces);
+
+      // const buildApprovedNameSpace = {
+      //   eip155: {
+      //     accounts: [
+      //       "eip155:1:0xaf91278622287E909adD0A163E67a7614Cd1C578",
+      //       "eip155:10:0xaf91278622287E909adD0A163E67a7614Cd1C578",
+      //     ],
+      //     chains: ["eip155:1", "eip155:10"],
+      //     events: [],
+      //     methods: [
+      //       "eth_signTransaction",
+      //       "eth_sign",
+      //       "eth_signTypedData",
+      //       "eth_signTypedData_v4",
+      //     ],
+      //   },
+      // };
+
+      const approvedNamespaces = buildApprovedNamespaces({
+        proposal: params,
+        supportedNamespaces: {
+          eip155: {
+            // @ts-ignore - Unsure why the string[] is not working for chains. Skipping as this is a test
+            chains: namespaces.eip155.chains,
+            methods: namespaces.eip155.methods,
+            events: namespaces.eip155.events,
+            accounts: namespaces.eip155.accounts,
+          },
+        },
+      });
+
+      console.log("approvedNamespaces", approvedNamespaces);
+
       await web3wallet.approveSession({
         id,
-        relayProtocol: relays[0].protocol,
-        namespaces,
+        namespaces: approvedNamespaces,
       });
 
       setModalVisible(false);
@@ -81,7 +153,6 @@ export default function App() {
   }
 
   async function handleReject() {
-    
     if (currentProposal) {
       const { id }: { id: number } = currentProposal;
       await web3wallet.rejectSession({
@@ -114,7 +185,7 @@ export default function App() {
     []
   );
 
-  const handleBarCodeScanned = async ({ data:uri }:{ data:string }) => {
+  const handleBarCodeScanned = async ({ data: uri }: { data: string }) => {
     setScanning(false);
     // Optionally, you can validate 'uri' here.
     setCurrentWCURI(uri);
@@ -125,7 +196,7 @@ export default function App() {
     }
   };
 
-  async function pair({ uri }:{ uri:string }) {
+  async function pair({ uri }: { uri: string }) {
     const pairing = await web3WalletPair({ uri });
     return pairing;
   }
@@ -174,7 +245,10 @@ export default function App() {
               )}
             </View>
             {!scanning && (
-              <Button onPress={() => pair({uri: currentWCURI})} title="Pair Session" />
+              <Button
+                onPress={() => pair({ uri: currentWCURI })}
+                title="Pair Session"
+              />
             )}
           </View>
         ) : (
