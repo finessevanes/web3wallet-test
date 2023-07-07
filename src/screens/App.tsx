@@ -17,7 +17,6 @@ import { BarCodeScanner } from "expo-barcode-scanner";
 
 type SessionProposal = SignClientTypes.EventArguments["session_proposal"];
 type SessionRequest = SignClientTypes.EventArguments["session_request"];
-type SessionDelete = SignClientTypes.EventArguments["session_delete"];
 
 export default function App() {
   const [currentWCURI, setCurrentWCURI] = useState("");
@@ -28,6 +27,7 @@ export default function App() {
   const [requestEventData, setRequestEventData] = useState<SessionRequest>();
   const [signModalVisible, setSignModalVisible] = useState(false);
   const [scanning, setScanning] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   //Add Initialization
   useInitialization();
@@ -36,9 +36,14 @@ export default function App() {
     (proposal: SignClientTypes.EventArguments["session_proposal"]) => {
       setModalVisible(true);
       setCurrentProposal(proposal);
+      setIsLoggedIn(true);
     },
     []
   );
+
+  const onSessionDelete = () => {
+    setIsLoggedIn(false);
+  };
 
   async function handleAccept() {
     if (currentProposal) {
@@ -164,6 +169,7 @@ export default function App() {
   useEffect(() => {
     web3wallet?.on("session_proposal", onSessionProposal);
     web3wallet?.on("session_request", onSessionRequest);
+    web3wallet?.on("session_delete", onSessionDelete);
   }, [
     pair,
     handleAccept,
@@ -172,6 +178,7 @@ export default function App() {
     onSessionRequest,
     onSessionProposal,
     successfulSession,
+    isLoggedIn
   ]);
 
   return (
@@ -182,7 +189,7 @@ export default function App() {
             ETH Address: {currentETHAddress ? currentETHAddress : "Loading..."}
           </Text>
 
-          {!successfulSession ? (
+          {!successfulSession || !isLoggedIn ? (
             <View>
               <TextInput
                 style={styles.textInputContainer}
