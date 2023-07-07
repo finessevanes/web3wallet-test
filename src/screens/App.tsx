@@ -28,7 +28,6 @@ export default function App() {
   const [scanning, setScanning] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
-  //Add Initialization
   useInitialization();
 
   const onSessionProposal = useCallback(
@@ -98,7 +97,6 @@ export default function App() {
       });
 
       setModalVisible(false);
-      setCurrentWCURI("");
       setCurrentProposal(undefined);
       setSuccessfulSession(true);
     }
@@ -126,7 +124,6 @@ export default function App() {
       });
 
       setModalVisible(false);
-      setCurrentWCURI("");
       setCurrentProposal(undefined);
     }
   }
