@@ -17,6 +17,7 @@ import { BarCodeScanner } from "expo-barcode-scanner";
 
 type SessionProposal = SignClientTypes.EventArguments["session_proposal"];
 type SessionRequest = SignClientTypes.EventArguments["session_request"];
+type SessionDelete = SignClientTypes.EventArguments["session_delete"];
 
 export default function App() {
   const [currentWCURI, setCurrentWCURI] = useState("");
@@ -175,44 +176,49 @@ export default function App() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.container}>
-        <Text>Web3Wallet Tutorial</Text>
-        <Text style={styles.addressContent}>
-          ETH Address: {currentETHAddress ? currentETHAddress : "Loading..."}
-        </Text>
+      {currentETHAddress ? (
+        <View style={styles.container}>
+          <Text style={styles.addressContent}>
+            ETH Address: {currentETHAddress ? currentETHAddress : "Loading..."}
+          </Text>
 
-        {!successfulSession ? (
-          <View>
-            <TextInput
-              style={styles.textInputContainer}
-              onChangeText={setCurrentWCURI}
-              value={currentWCURI}
-              placeholder="Enter WC URI (wc:1234...)"
-            />
+          {!successfulSession ? (
             <View>
-              {scanning ? (
-                <BarCodeScanner
-                  onBarCodeScanned={handleBarCodeScanned}
-                  style={{ height: 200, width: 200 }}
-                />
-              ) : (
+              <TextInput
+                style={styles.textInputContainer}
+                onChangeText={setCurrentWCURI}
+                value={currentWCURI}
+                placeholder="Enter WC URI (wc:1234...)"
+              />
+              <View>
+                {scanning ? (
+                  <View style={styles.cameraContainer}>
+                    <BarCodeScanner
+                      onBarCodeScanned={handleBarCodeScanned}
+                      style={styles.scannerStyle}
+                    />
+                  </View>
+                ) : (
+                  <Button
+                    title="Scan QR Code"
+                    onPress={() => setScanning(true)}
+                  />
+                )}
+              </View>
+              {!scanning && (
                 <Button
-                  title="Scan QR Code"
-                  onPress={() => setScanning(true)}
+                  onPress={() => pair({ uri: currentWCURI })}
+                  title="Pair Session"
                 />
               )}
             </View>
-            {!scanning && (
-              <Button
-                onPress={() => pair({ uri: currentWCURI })}
-                title="Pair Session"
-              />
-            )}
-          </View>
-        ) : (
-          <Button onPress={() => disconnect()} title="Disconnect" />
-        )}
-      </View>
+          ) : (
+            <Button onPress={() => disconnect()} title="Disconnect" />
+          )}
+        </View>
+      ) : (
+        <Text>Loading...</Text>
+      )}
 
       <PairingModal
         handleAccept={handleAccept}
@@ -261,6 +267,17 @@ const styles = StyleSheet.create({
   addressContent: {
     textAlign: "center",
     marginVertical: 8,
+  },
+  scannerStyle: {
+    height: 200,
+    width: 200,
+    borderRadius: 20,
+    overflow: "hidden",
+  },
+  cameraContainer: {
+    justifyContent: "center",
+    alignItems: "center",
+    marginVertical: 10,
   },
 });
 
