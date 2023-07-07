@@ -56,6 +56,9 @@ export default function App() {
       const { requiredNamespaces, optionalNamespaces } = params;
       const namespaces: SessionTypes.Namespaces = {};
 
+      console.log("params REQ", params.requiredNamespaces);
+      console.log("params OPT", params.optionalNamespaces);
+
       // here we will pull the chains and accounts from
       Object.keys(requiredNamespaces).forEach((key) => {
         // create an array for accounts and chains
@@ -112,20 +115,25 @@ export default function App() {
       //   },
       // };
 
+      console.log("params...", params.requiredNamespaces);
+      console.log("namespaces 1...", namespaces.eip155.chains);
+      console.log("namespaces 2...", namespaces.eip155.methods);
+      console.log("namespaces 3...", namespaces.eip155.events);
+      console.log("namespaces 4...", namespaces.eip155.accounts);
+
       const approvedNamespaces = buildApprovedNamespaces({
         proposal: params,
         supportedNamespaces: {
           eip155: {
-            // @ts-ignore - Unsure why the string[] is not working for chains. Skipping as this is a test
             chains: namespaces.eip155.chains,
-            methods: namespaces.eip155.methods,
-            events: namespaces.eip155.events,
+            methods: ["eth_sendTransaction", "personal_sign"],
+            events: ["chainChanged", "accountsChanged"],
             accounts: namespaces.eip155.accounts,
           },
         },
       });
 
-      console.log("approvedNamespaces", approvedNamespaces);
+      console.log("approvedNamespaces...", approvedNamespaces);
 
       await web3wallet.approveSession({
         id,
