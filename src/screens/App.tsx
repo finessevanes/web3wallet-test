@@ -31,9 +31,6 @@ export default function App() {
   //Add Initialization
   useInitialization();
 
-  // this the event is heard, session_proposal. this function gets called. the dapp initiatess the session proposal
-
-  // this function sets the proposal to currentProposal
   const onSessionProposal = useCallback(
     (proposal: SignClientTypes.EventArguments["session_proposal"]) => {
       setModalVisible(true);
@@ -42,31 +39,15 @@ export default function App() {
     []
   );
 
-  // this function is responsible for accepting the proposal. the user clicks on this button to accept the proposal. the proposal information the user needs to accept would be the following:
-  // what methods
-  // what events
-  // what chains
-  // we need to get all of this our from the proposal
-
   async function handleAccept() {
-    // the methods, chains, and events will need to be pulled out from the required and optional namespaces
-
     if (currentProposal) {
       const { id, params }: { id: number; params: any } = currentProposal;
       const { requiredNamespaces, optionalNamespaces } = params;
       const namespaces: SessionTypes.Namespaces = {};
 
-      console.log("params REQ", params.requiredNamespaces);
-      console.log("params OPT", params.optionalNamespaces);
-
-      // here we will pull the chains and accounts from
       Object.keys(requiredNamespaces).forEach((key) => {
-        // create an array for accounts and chains
         const accounts: string[] = [];
-        // chains is new using the util
         const chains: string[] = [];
-
-        // you go though chains
         requiredNamespaces[key].chains.map((chain: string) => {
           [currentETHAddress].map((acc) => accounts.push(`${chain}:${acc}`));
           chains.push(chain);
@@ -79,11 +60,9 @@ export default function App() {
         };
       });
 
-      // here pull the chains and accounts from optional namespaces
       Object.keys(optionalNamespaces).forEach((key) => {
         const accounts: string[] = [];
         const chains: string[] = [];
-
         optionalNamespaces[key].chains.map((chain: string) => {
           [currentETHAddress].map((acc) => accounts.push(`${chain}:${acc}`));
           chains.push(chain);
@@ -96,44 +75,17 @@ export default function App() {
         };
       });
 
-      console.log("#### buildApprovedNameSpace data:", namespaces);
-
-      // const buildApprovedNameSpace = {
-      //   eip155: {
-      //     accounts: [
-      //       "eip155:1:0xaf91278622287E909adD0A163E67a7614Cd1C578",
-      //       "eip155:10:0xaf91278622287E909adD0A163E67a7614Cd1C578",
-      //     ],
-      //     chains: ["eip155:1", "eip155:10"],
-      //     events: [],
-      //     methods: [
-      //       "eth_signTransaction",
-      //       "eth_sign",
-      //       "eth_signTypedData",
-      //       "eth_signTypedData_v4",
-      //     ],
-      //   },
-      // };
-
-      console.log("params...", params.requiredNamespaces);
-      console.log("namespaces 1...", namespaces.eip155.chains);
-      console.log("namespaces 2...", namespaces.eip155.methods);
-      console.log("namespaces 3...", namespaces.eip155.events);
-      console.log("namespaces 4...", namespaces.eip155.accounts);
-
       const approvedNamespaces = buildApprovedNamespaces({
         proposal: params,
         supportedNamespaces: {
           eip155: {
-            chains: namespaces.eip155.chains,
+            chains: ["eip155:1"],
             methods: ["eth_sendTransaction", "personal_sign"],
             events: ["chainChanged", "accountsChanged"],
             accounts: namespaces.eip155.accounts,
           },
         },
       });
-
-      console.log("approvedNamespaces...", approvedNamespaces);
 
       await web3wallet.approveSession({
         id,
@@ -195,7 +147,6 @@ export default function App() {
 
   const handleBarCodeScanned = async ({ data: uri }: { data: string }) => {
     setScanning(false);
-    // Optionally, you can validate 'uri' here.
     setCurrentWCURI(uri);
     try {
       await pair({ uri });
@@ -209,7 +160,6 @@ export default function App() {
     return pairing;
   }
 
-  // Add useEffect
   useEffect(() => {
     web3wallet?.on("session_proposal", onSessionProposal);
     web3wallet?.on("session_request", onSessionRequest);
