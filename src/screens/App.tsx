@@ -9,7 +9,7 @@ import useInitialization, {
 import PairingModal from "./PairingModal";
 import { SignClientTypes, SessionTypes } from "@walletconnect/types";
 import { getSdkError, buildApprovedNamespaces } from "@walletconnect/utils";
-import { Button, StyleSheet, Text, TextInput, View } from "react-native";
+import { Button, StyleSheet, Text, View } from "react-native";
 import { useEffect, useState, useCallback } from "react";
 import { EIP155_SIGNING_METHODS } from "../utils/EIP155Lib";
 import SignModal from "./SignModal";
@@ -19,7 +19,6 @@ type SessionProposal = SignClientTypes.EventArguments["session_proposal"];
 type SessionRequest = SignClientTypes.EventArguments["session_request"];
 
 export default function App() {
-  const [currentWCURI, setCurrentWCURI] = useState("");
   const [modalVisible, setModalVisible] = useState(false);
   const [currentProposal, setCurrentProposal] = useState<SessionProposal>();
   const [successfulSession, setSuccessfulSession] = useState(false);
@@ -153,7 +152,6 @@ export default function App() {
 
   const handleBarCodeScanned = async ({ data: uri }: { data: string }) => {
     setScanning(false);
-    setCurrentWCURI(uri);
     try {
       await pair({ uri });
     } catch (error) {
@@ -191,12 +189,6 @@ export default function App() {
 
           {!successfulSession || !isLoggedIn ? (
             <View>
-              <TextInput
-                style={styles.textInputContainer}
-                onChangeText={setCurrentWCURI}
-                value={currentWCURI}
-                placeholder="Enter WC URI (wc:1234...)"
-              />
               <View>
                 {scanning ? (
                   <View style={styles.cameraContainer}>
@@ -212,12 +204,6 @@ export default function App() {
                   />
                 )}
               </View>
-              {!scanning && (
-                <Button
-                  onPress={() => pair({ uri: currentWCURI })}
-                  title="Pair Session"
-                />
-              )}
             </View>
           ) : (
             <Button onPress={() => disconnect()} title="Disconnect" />
