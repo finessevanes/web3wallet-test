@@ -98,7 +98,6 @@ export default function App() {
       });
 
       setModalVisible(false);
-      setCurrentWCURI("");
       setCurrentProposal(undefined);
       setSuccessfulSession(true);
     }
