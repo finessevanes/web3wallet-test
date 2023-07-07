@@ -1,232 +1,32 @@
 import "fast-text-encoding";
 import "@walletconnect/react-native-compat";
 import { registerRootComponent } from "expo";
-import useInitialization, {
-  currentETHAddress,
-  web3wallet,
-  web3WalletPair,
-} from "../utils/WalletConnectUtils";
-import PairingModal from "./PairingModal";
-import { SignClientTypes, SessionTypes } from "@walletconnect/types";
-import { getSdkError, buildApprovedNamespaces } from "@walletconnect/utils";
-import { Button, StyleSheet, Text, View } from "react-native";
-import { useEffect, useState, useCallback } from "react";
-import { EIP155_SIGNING_METHODS } from "../utils/EIP155Lib";
-import SignModal from "./SignModal";
-import { BarCodeScanner } from "expo-barcode-scanner";
-
-type SessionProposal = SignClientTypes.EventArguments["session_proposal"];
-type SessionRequest = SignClientTypes.EventArguments["session_request"];
+import { StyleSheet, View } from "react-native";
 
 export default function App() {
-  const [modalVisible, setModalVisible] = useState(false);
-  const [currentProposal, setCurrentProposal] = useState<SessionProposal>();
-  const [successfulSession, setSuccessfulSession] = useState(false);
-  const [requestSession, setRequestSession] = useState<SessionTypes.Struct>();
-  const [requestEventData, setRequestEventData] = useState<SessionRequest>();
-  const [signModalVisible, setSignModalVisible] = useState(false);
-  const [scanning, setScanning] = useState(false);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  // useInitialization
 
-  //Add Initialization
-  useInitialization();
+  // onSessionProposal
 
-  const onSessionProposal = useCallback(
-    (proposal: SignClientTypes.EventArguments["session_proposal"]) => {
-      setModalVisible(true);
-      setCurrentProposal(proposal);
-      setIsLoggedIn(true);
-    },
-    []
-  );
+  // onSessionDelete
 
-  const onSessionDelete = () => {
-    setIsLoggedIn(false);
-  };
+  // handleAccept
 
-  async function handleAccept() {
-    if (currentProposal) {
-      const { id, params }: { id: number; params: any } = currentProposal;
-      const { requiredNamespaces, optionalNamespaces } = params;
-      const namespaces: SessionTypes.Namespaces = {};
+  // disconnect
 
-      Object.keys(requiredNamespaces).forEach((key) => {
-        const accounts: string[] = [];
-        const chains: string[] = [];
-        requiredNamespaces[key].chains.map((chain: string) => {
-          [currentETHAddress].map((acc) => accounts.push(`${chain}:${acc}`));
-          chains.push(chain);
-        });
-        namespaces[key] = {
-          chains,
-          accounts,
-          methods: requiredNamespaces[key].methods,
-          events: requiredNamespaces[key].events,
-        };
-      });
+  // handleReject
 
-      Object.keys(optionalNamespaces).forEach((key) => {
-        const accounts: string[] = [];
-        const chains: string[] = [];
-        optionalNamespaces[key].chains.map((chain: string) => {
-          [currentETHAddress].map((acc) => accounts.push(`${chain}:${acc}`));
-          chains.push(chain);
-        });
-        namespaces[key] = {
-          chains,
-          accounts,
-          methods: optionalNamespaces[key].methods,
-          events: optionalNamespaces[key].events,
-        };
-      });
+  // onSessionRequest
 
-      const approvedNamespaces = buildApprovedNamespaces({
-        proposal: params,
-        supportedNamespaces: {
-          eip155: {
-            chains: ["eip155:1"],
-            methods: ["eth_sendTransaction", "personal_sign"],
-            events: ["chainChanged", "accountsChanged"],
-            accounts: namespaces.eip155.accounts,
-          },
-        },
-      });
+  // handleBarCodeScanned
 
-      await web3wallet.approveSession({
-        id,
-        namespaces: approvedNamespaces,
-      });
+  // pair
 
-      setModalVisible(false);
-      setCurrentProposal(undefined);
-      setSuccessfulSession(true);
-    }
-  }
+  // useEffect web3wallet.on x 3
 
-  async function disconnect() {
-    const activeSessions = await web3wallet.getActiveSessions();
-    const topic = Object.values(activeSessions)[0].topic;
-
-    if (activeSessions) {
-      await web3wallet.disconnectSession({
-        topic,
-        reason: getSdkError("USER_DISCONNECTED"),
-      });
-    }
-    setSuccessfulSession(false);
-  }
-
-  async function handleReject() {
-    if (currentProposal) {
-      const { id }: { id: number } = currentProposal;
-      await web3wallet.rejectSession({
-        id,
-        reason: getSdkError("USER_REJECTED_METHODS"),
-      });
-
-      setModalVisible(false);
-      setCurrentProposal(undefined);
-    }
-  }
-
-  const onSessionRequest = useCallback(
-    async (requestEvent: SignClientTypes.EventArguments["session_request"]) => {
-      const { topic, params } = requestEvent;
-      const { request } = params;
-      const requestSessionData =
-        web3wallet.engine.signClient.session.get(topic);
-
-      switch (request.method) {
-        case EIP155_SIGNING_METHODS.ETH_SIGN:
-        case EIP155_SIGNING_METHODS.PERSONAL_SIGN:
-          setRequestSession(requestSessionData);
-          setRequestEventData(requestEvent);
-          setSignModalVisible(true);
-          return;
-      }
-    },
-    []
-  );
-
-  const handleBarCodeScanned = async ({ data: uri }: { data: string }) => {
-    setScanning(false);
-    try {
-      await pair({ uri });
-    } catch (error) {
-      console.error("Failed to pair:", error);
-    }
-  };
-
-  async function pair({ uri }: { uri: string }) {
-    const pairing = await web3WalletPair({ uri });
-    return pairing;
-  }
-
-  useEffect(() => {
-    web3wallet?.on("session_proposal", onSessionProposal);
-    web3wallet?.on("session_request", onSessionRequest);
-    web3wallet?.on("session_delete", onSessionDelete);
-  }, [
-    pair,
-    handleAccept,
-    handleReject,
-    currentETHAddress,
-    onSessionRequest,
-    onSessionProposal,
-    successfulSession,
-    isLoggedIn
-  ]);
-
-  return (
-    <View style={styles.container}>
-      {currentETHAddress ? (
-        <View style={styles.container}>
-          <Text style={styles.addressContent}>
-            ETH Address: {currentETHAddress ? currentETHAddress : "Loading..."}
-          </Text>
-
-          {!successfulSession || !isLoggedIn ? (
-            <View>
-              <View>
-                {scanning ? (
-                  <View style={styles.cameraContainer}>
-                    <BarCodeScanner
-                      onBarCodeScanned={handleBarCodeScanned}
-                      style={styles.scannerStyle}
-                    />
-                  </View>
-                ) : (
-                  <Button
-                    title="Scan QR Code"
-                    onPress={() => setScanning(true)}
-                  />
-                )}
-              </View>
-            </View>
-          ) : (
-            <Button onPress={() => disconnect()} title="Disconnect" />
-          )}
-        </View>
-      ) : (
-        <Text>Loading...</Text>
-      )}
-
-      <PairingModal
-        handleAccept={handleAccept}
-        handleReject={handleReject}
-        visible={modalVisible}
-        setModalVisible={setModalVisible}
-        currentProposal={currentProposal}
-      />
-
-      <SignModal
-        visible={signModalVisible}
-        setModalVisible={setSignModalVisible}
-        requestEvent={requestEventData}
-        requestSession={requestSession}
-      />
-    </View>
-  );
+  return <View style={styles.container}>
+    // TODO
+    </View>;
 }
 
 const styles = StyleSheet.create({
