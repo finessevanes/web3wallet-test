@@ -81,7 +81,6 @@ export default function App() {
   }
 
   async function handleReject() {
-    
     if (currentProposal) {
       const { id }: { id: number } = currentProposal;
       await web3wallet.rejectSession({
@@ -114,7 +113,7 @@ export default function App() {
     []
   );
 
-  const handleBarCodeScanned = async ({ data:uri }:{ data:string }) => {
+  const handleBarCodeScanned = async ({ data: uri }: { data: string }) => {
     setScanning(false);
     // Optionally, you can validate 'uri' here.
     setCurrentWCURI(uri);
@@ -125,7 +124,7 @@ export default function App() {
     }
   };
 
-  async function pair({ uri }:{ uri:string }) {
+  async function pair({ uri }: { uri: string }) {
     const pairing = await web3WalletPair({ uri });
     return pairing;
   }
@@ -174,7 +173,10 @@ export default function App() {
               )}
             </View>
             {!scanning && (
-              <Button onPress={() => pair({uri: currentWCURI})} title="Pair Session" />
+              <Button
+                onPress={() => pair({ uri: currentWCURI })}
+                title="Pair Session"
+              />
             )}
           </View>
         ) : (
